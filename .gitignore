@@ -1,7 +1,25 @@
-.ipynb_checkpoints/
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+
+# --- Virtual env ---
 .venv/
+venv/
+ENV/
+
+# --- Jupyter ---
+.ipynb_checkpoints
+
+# --- macOS ---
 .DS_Store
 
-/data
+# --- ML outputs / dane (żeby repo nie puchło) ---
+runs/
+data/raw/
+
+# (opcjonalnie) jeśli data/processed jest duże, odkomentuj:
+# data/processed/
+
+# (opcjonalnie) jeśli zapisujesz modele osobno:
+# models/
