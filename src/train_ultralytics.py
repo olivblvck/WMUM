@@ -1,5 +1,6 @@
 from pathlib import Path
 import csv
+
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,14 +9,14 @@ RUNS = ROOT / "runs" / "ultralytics"
 
 EPOCHS = 20
 IMGSZ = 512
-BATCH = 8
-
+BATCH = 4
 TRAIN_DEVICE = "mps"
 VAL_DEVICE = "cpu"
 
-SKIP_DONE = True  # pomija, jeśli istnieje weights/best.pt
+# Jeśli True i istnieje best.pt => pomiń zadanie (NIE resume)
+# Jeśli chcesz zawsze móc wznawiać, ustaw False.
+SKIP_IF_BEST_EXISTS = True
 
-# 6 linijek: dataset x model (możesz każdą "wyłączyć" enabled=False)
 TASKS = [
     {"dataset": "cats_dogs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "cats_dogs", "model": "yolov8s.pt", "enabled": True},
@@ -25,6 +26,7 @@ TASKS = [
     {"dataset": "traffic_signs", "model": "yolov8s.pt", "enabled": True},
 ]
 
+
 def metric_get(obj, path, default=None):
     cur = obj
     for part in path.split("."):
@@ -32,6 +34,7 @@ def metric_get(obj, path, default=None):
             return default
         cur = getattr(cur, part, None)
     return default if cur is None else cur
+
 
 def to_scalar(x, default=0.0):
     if x is None:
@@ -41,6 +44,7 @@ def to_scalar(x, default=0.0):
     if isinstance(x, (list, tuple)):
         vals = [float(v) for v in x if isinstance(v, (int, float))]
         return float(sum(vals) / len(vals)) if vals else float(default)
+
     m = getattr(x, "mean", None)
     if callable(m):
         try:
@@ -49,25 +53,30 @@ def to_scalar(x, default=0.0):
             return float(item()) if callable(item) else float(y)
         except Exception:
             pass
+
     item = getattr(x, "item", None)
     if callable(item):
         try:
             return float(item())
         except Exception:
             return float(default)
+
     try:
         return float(x)
     except Exception:
         return float(default)
 
+
 def extract_metrics(val_res):
     rd = getattr(val_res, "results_dict", None)
     if isinstance(rd, dict) and rd:
+
         def pick(keys):
             for k in keys:
                 if k in rd:
                     return to_scalar(rd[k], 0.0)
             return 0.0
+
         precision = pick(["metrics/precision(B)", "metrics/precision", "precision"])
         recall = pick(["metrics/recall(B)", "metrics/recall", "recall"])
         map50 = pick(["metrics/mAP50(B)", "metrics/mAP50", "mAP50"])
@@ -80,7 +89,8 @@ def extract_metrics(val_res):
     map50_95 = to_scalar(metric_get(val_res, "box.map", 0.0), 0.0)
     return p, r, map50, map50_95
 
-def write_summary(rows, out_csv):
+
+def write_summary(rows, out_csv: Path):
     with out_csv.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(
             f,
@@ -88,6 +98,7 @@ def write_summary(rows, out_csv):
         )
         w.writeheader()
         w.writerows(rows)
+
 
 def main():
     RUNS.mkdir(parents=True, exist_ok=True)
@@ -100,32 +111,55 @@ def main():
 
         ds = t["dataset"]
         model_ckpt = t["model"]
+
         exp_name = f"{ds}__{Path(model_ckpt).stem}"
         run_dir = RUNS / exp_name
-        best_pt = run_dir / "weights" / "best.pt"
 
         data_yaml = DATA / ds / "data.yaml"
         if not data_yaml.exists():
             raise FileNotFoundError(f"Brak {data_yaml}")
 
-        if SKIP_DONE and best_pt.exists():
-            print(f"[SKIP] {exp_name} already done: {best_pt}")
-        else:
-            model = YOLO(model_ckpt)
-            model.train(
-                data=str(data_yaml),
-                epochs=EPOCHS,
-                imgsz=IMGSZ,
-                batch=BATCH,
-                device=TRAIN_DEVICE,
-                project=str(RUNS),
-                name=exp_name,
-                exist_ok=True,
-                val=False,
-            )
+        best_pt = run_dir / "weights" / "best.pt"
+        last_pt = run_dir / "weights" / "last.pt"
 
-        # Walidacja (CPU) i zapis wyników w RUNS, nie w scripts/runs/detect/...
-        model_for_val = YOLO(str(best_pt)) if best_pt.exists() else YOLO(model_ckpt)
+        # ---- TRAIN (z resume) ----
+        if SKIP_IF_BEST_EXISTS and best_pt.exists():
+            print(f"[SKIP] {exp_name} best exists: {best_pt}")
+        else:
+            if last_pt.exists():
+                print(f"[RESUME] {exp_name} from {last_pt}")
+                model = YOLO(str(last_pt))
+                model.train(
+                    data=str(data_yaml),
+                    epochs=EPOCHS,
+                    imgsz=IMGSZ,
+                    batch=BATCH,
+                    device=TRAIN_DEVICE,
+                    project=str(RUNS),
+                    name=exp_name,
+                    exist_ok=True,
+                    resume=True,
+                    val=False,
+                )
+            else:
+                print(f"[TRAIN] {exp_name} from base={model_ckpt}")
+                model = YOLO(model_ckpt)
+                model.train(
+                    data=str(data_yaml),
+                    epochs=EPOCHS,
+                    imgsz=IMGSZ,
+                    batch=BATCH,
+                    device=TRAIN_DEVICE,
+                    project=str(RUNS),
+                    name=exp_name,
+                    exist_ok=True,
+                    val=False,
+                )
+
+        # ---- VAL (CPU) ----
+        weights_for_val = best_pt if best_pt.exists() else (last_pt if last_pt.exists() else None)
+        model_for_val = YOLO(str(weights_for_val)) if weights_for_val else YOLO(model_ckpt)
+
         val_res = model_for_val.val(
             data=str(data_yaml),
             imgsz=IMGSZ,
@@ -137,18 +171,23 @@ def main():
 
         precision, recall, map50, map50_95 = extract_metrics(val_res)
 
-        rows.append({
-            "dataset": ds,
-            "model": Path(model_ckpt).stem,
-            "precision": precision,
-            "recall": recall,
-            "map50": map50,
-            "map50_95": map50_95,
-            "run_dir": str(run_dir.resolve()),
-        })
+        rows.append(
+            {
+                "dataset": ds,
+                "model": Path(model_ckpt).stem,
+                "precision": precision,
+                "recall": recall,
+                "map50": map50,
+                "map50_95": map50_95,
+                "run_dir": str(run_dir.resolve()),
+            }
+        )
+
         write_summary(rows, out_csv)
+        print("Updated:", out_csv)
 
     print("Done:", out_csv)
+
 
 if __name__ == "__main__":
     main()

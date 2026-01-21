@@ -3,3 +3,4 @@ torchvision
 pycocotools
 Pillow
 tqdm
+ultralytics
