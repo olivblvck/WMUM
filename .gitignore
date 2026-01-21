@@ -19,7 +19,7 @@ runs/
 data/raw/
 
 # (opcjonalnie) jeśli data/processed jest duże, odkomentuj:
-# data/processed/
+data/processed/
 
 # (opcjonalnie) jeśli zapisujesz modele osobno:
 # models/
