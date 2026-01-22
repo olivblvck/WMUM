@@ -16,20 +16,19 @@ from torchvision.transforms import functional as F
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "processed" / "coco"
 RUNS = ROOT / "runs" / "torchvision"
 
 # --- trening (Mac: CPU jest stabilny dla detekcji; mps bywa kapryśne/wolne) ---
-EPOCHS = 3
+EPOCHS = 10
 BATCH_SIZE = 1
 LR = 1e-4
 WEIGHT_DECAY = 1e-4
 NUM_WORKERS = 0
 DEVICE = "cpu"
 
-# zapisz checkpoint po każdej epoce (i można wznowić po killu)
+# zapis checkpointu po każdej epoce (i można wznowić po killu)
 SAVE_EVERY_EPOCH = 1
 
 # jeśli True: gdy jest model_final.pt to skip (nie wznawia, tylko pomija)
@@ -112,8 +111,16 @@ class CocoDet(CocoDetection):
 
             boxes_t = torch.as_tensor(boxes, dtype=torch.float32)
             labels_t = torch.as_tensor(labels, dtype=torch.int64)
-            areas_t = torch.as_tensor(areas, dtype=torch.float32) if len(areas) else torch.zeros((0,), dtype=torch.float32)
-            iscrowd_t = torch.as_tensor(iscrowd, dtype=torch.int64) if len(iscrowd) else torch.zeros((0,), dtype=torch.int64)
+            areas_t = (
+                torch.as_tensor(areas, dtype=torch.float32)
+                if len(areas)
+                else torch.zeros((0,), dtype=torch.float32)
+            )
+            iscrowd_t = (
+                torch.as_tensor(iscrowd, dtype=torch.int64)
+                if len(iscrowd)
+                else torch.zeros((0,), dtype=torch.int64)
+            )
 
             target = {
                 "boxes": boxes_t,
@@ -142,8 +149,12 @@ def make_model(method: str, num_classes: int) -> torch.nn.Module:
 
     if method == "retinanet":
         model = torchvision.models.detection.retinanet_resnet50_fpn_v2(weights="DEFAULT")
-        in_features = model.head.classification_head.conv[0].in_channels
+
+        # FIX: w nowszych torchvision classification_head.conv[0] bywa Conv2dNormActivation
+        # który nie ma .in_channels; cls_logits to normalny Conv2d.
+        in_features = model.head.classification_head.cls_logits.in_channels
         num_anchors = model.head.classification_head.num_anchors
+
         model.head.classification_head = torchvision.models.detection.retinanet.RetinaNetClassificationHead(
             in_features, num_anchors, num_classes
         )
@@ -180,26 +191,31 @@ def train_one_epoch(model, loader, optimizer, device, epoch, max_batches=None):
 
 
 @torch.inference_mode()
-def coco_eval_bbox(model, ann_file: Path, dataset: CocoDet, device, out_json: Path, contig_to_cat_id: Dict[int, int]):
+def coco_eval_bbox(
+    model,
+    ann_file: Path,
+    dataset: CocoDet,
+    device,
+    out_json: Path,
+    contig_to_cat_id: Dict[int, int],
+):
     model.eval()
     coco_gt = COCO(str(ann_file))
-
     preds = []
+
     for i in tqdm(range(len(dataset)), desc="infer", leave=False):
         img, target = dataset[i]
         img = img.to(device)
-
         out = model([img])[0]
+
         boxes = out["boxes"].detach().cpu()
         scores = out["scores"].detach().cpu()
         labels = out["labels"].detach().cpu()
-
         img_id = int(target["image_id"].item())
 
         for box, score, lab in zip(boxes, scores, labels):
-            if float(score) < 0.05:
+            if float(score) < 0.01:
                 continue
-
             x1, y1, x2, y2 = box.tolist()
             w = max(0.0, x2 - x1)
             h = max(0.0, y2 - y1)
@@ -207,16 +223,24 @@ def coco_eval_bbox(model, ann_file: Path, dataset: CocoDet, device, out_json: Pa
             contig = int(lab.item())
             coco_cat = int(contig_to_cat_id.get(contig, contig))
 
-            preds.append({
-                "image_id": img_id,
-                "category_id": coco_cat,
-                "bbox": [x1, y1, w, h],
-                "score": float(score.item()),
-            })
+            preds.append(
+                {
+                    "image_id": img_id,
+                    "category_id": coco_cat,
+                    "bbox": [x1, y1, w, h],
+                    "score": float(score.item()),
+                }
+            )
 
     out_json.write_text(json.dumps(preds), encoding="utf-8")
 
+    # FIX: pycocotools.loadRes crashuje, jeśli preds == []
+    if len(preds) == 0:
+        print("[WARN] Empty predictions -> COCOeval skipped (AP=0).")
+        return 0.0, 0.0, 0.0
+
     coco_dt = coco_gt.loadRes(str(out_json))
+
     coco_eval = COCOeval(coco_gt, coco_dt, iouType="bbox")
     coco_eval.evaluate()
     coco_eval.accumulate()
@@ -229,23 +253,36 @@ def coco_eval_bbox(model, ann_file: Path, dataset: CocoDet, device, out_json: Pa
 
 
 def save_checkpoint(path: Path, epoch: int, model: torch.nn.Module, optimizer: torch.optim.Optimizer, avg_loss: float):
+    # atomic save: zapis do tmp i dopiero potem replace (żeby nie było uszkodzonego .pth po przerwaniu)
     ckpt = {
         "epoch": int(epoch),
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
         "avg_loss": float(avg_loss),
     }
-    torch.save(ckpt, path)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    torch.save(ckpt, tmp)
+    tmp.replace(path)
 
 
 def try_load_checkpoint(path: Path, model: torch.nn.Module, optimizer: torch.optim.Optimizer, device: str):
     if not path.exists():
         return 0, None
 
-    ckpt = torch.load(path, map_location=device)
-    model.load_state_dict(ckpt["model_state_dict"])
-    optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-    start_epoch = int(ckpt["epoch"]) + 1
+    try:
+        ckpt = torch.load(path, map_location=device)
+    except Exception as e:
+        print(f"[WARN] Bad checkpoint {path}: {e} -> starting from scratch")
+        return 0, None
+
+    try:
+        model.load_state_dict(ckpt["model_state_dict"])
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+    except Exception as e:
+        print(f"[WARN] Checkpoint incompatible {path}: {e} -> starting from scratch")
+        return 0, None
+
+    start_epoch = int(ckpt.get("epoch", -1)) + 1
     last_loss = ckpt.get("avg_loss", None)
     return start_epoch, last_loss
 
@@ -263,7 +300,6 @@ def main():
         method = t["method"]
 
         train_dir, train_json, val_dir, val_json = coco_paths(ds)
-
         categories = load_categories(train_json)
         cat_id_to_contig = build_cat_mapping(categories)
         contig_to_cat_id = {v: k for k, v in cat_id_to_contig.items()}
@@ -311,17 +347,19 @@ def main():
 
         ap, ap50, ap75 = coco_eval_bbox(model, val_json, ds_val, DEVICE, preds_json, contig_to_cat_id)
 
-        rows.append({
-            "dataset": ds,
-            "method": method,
-            "device": DEVICE,
-            "epochs": EPOCHS,
-            "batch_size": BATCH_SIZE,
-            "AP": ap,
-            "AP50": ap50,
-            "AP75": ap75,
-            "run_dir": str(out_dir.resolve()),
-        })
+        rows.append(
+            {
+                "dataset": ds,
+                "method": method,
+                "device": DEVICE,
+                "epochs": EPOCHS,
+                "batch_size": BATCH_SIZE,
+                "AP": ap,
+                "AP50": ap50,
+                "AP75": ap75,
+                "run_dir": str(out_dir.resolve()),
+            }
+        )
 
         with out_csv.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=rows[0].keys())
