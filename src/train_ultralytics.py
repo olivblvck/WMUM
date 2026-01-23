@@ -20,8 +20,8 @@ SKIP_IF_BEST_EXISTS = True
 TASKS = [
     {"dataset": "cats_dogs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "cats_dogs", "model": "yolov8s.pt", "enabled": True},
-    # {"dataset": "fruits_vegetables", "model": "yolov8n.pt", "enabled": True},
-    # {"dataset": "fruits_vegetables", "model": "yolov8s.pt", "enabled": True},
+    {"dataset": "fruits_vegetables", "model": "yolov8n.pt", "enabled": True},
+    {"dataset": "fruits_vegetables", "model": "yolov8s.pt", "enabled": True},
     {"dataset": "traffic_signs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "traffic_signs", "model": "yolov8s.pt", "enabled": True},
     #{"dataset": "people", "model": "yolov8n.pt", "enabled": True},

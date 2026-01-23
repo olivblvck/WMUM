@@ -80,7 +80,7 @@ def write_csv(rows: list[dict], out_csv: Path) -> None:
 
 # -------- COCO helpers --------
 def find_ann(split_dir: Path) -> Path:
-    # Roboflow COCO najczęściej ma _annotations.coco.json (u Ciebie tak jest) [file:5]
+    # Roboflow COCO najczęściej ma _annotations.coco.json [train_torchvision.py]
     for name in ["_annotations.coco.json", "annotations.coco.json"]:
         p = split_dir / name
         if p.exists():
@@ -99,14 +99,14 @@ def coco_paths(dataset: str) -> tuple[Path, Path, Path, Path]:
 def contig_to_name_from_train_json(train_ann: Path) -> dict[int, str]:
     obj = json.loads(train_ann.read_text(encoding="utf-8"))
     cats = obj.get("categories", [])
-    # w Twoim train_torchvision.py mapping to: sort po category_id i nadaj 1..K [file:5]
+    # zgodnie z train_torchvision.py: sort po category_id i nadaj 1..K [file:5]
     cats_sorted = sorted(cats, key=lambda c: int(c["id"]))
     return {i + 1: str(c["name"]) for i, c in enumerate(cats_sorted)}
 
 
 # -------- YOLO helpers --------
 def yolo_valid_images_dir(dataset: str) -> Path:
-    # u Ciebie YOLO ma valid/images (w logach) [file:7]
+    # u Ciebie YOLO ma valid/images [file:6][file:7]
     cand = DATA_YOLO / dataset / "valid" / "images"
     if cand.exists():
         return cand
@@ -133,12 +133,13 @@ class EvalRow:
 # -------- YOLO eval --------
 def eval_yolo(
     dataset: str,
-    model_stem: str,           # "yolov8n" / "yolov8s"
+    model_stem: str,  # "yolov8n" / "yolov8s"
     n_images: int = 12,
     conf: float = 0.25,
     seed: int = 0,
     color: str = "red",
     topk: int = 3,
+    image_paths: list[Path] | None = None,
 ) -> EvalRow:
     if YOLO is None:
         raise RuntimeError("Ultralytics nie jest zainstalowany (pip install ultralytics).")
@@ -148,17 +149,20 @@ def eval_yolo(
     if not weights.exists():
         raise FileNotFoundError(f"Brak wag: {weights}")
 
-    img_dir = yolo_valid_images_dir(dataset)
-    if not img_dir.exists():
-        raise FileNotFoundError(f"Nie znaleziono katalogu obrazów valid: {img_dir}")
-
     out_dir = OUT / "ultralytics" / f"{dataset}__{model_stem}"
     ensure_dir(out_dir)
 
     model = YOLO(str(weights))
     names = model.names if hasattr(model, "names") else {}
 
-    imgs = pick_images(img_dir, k=n_images, seed=seed)
+    if image_paths is None:
+        img_dir = yolo_valid_images_dir(dataset)
+        if not img_dir.exists():
+            raise FileNotFoundError(f"Nie znaleziono katalogu obrazów valid: {img_dir}")
+        imgs = pick_images(img_dir, k=n_images, seed=seed)
+    else:
+        imgs = [Path(p) for p in image_paths][:n_images]
+
     det_counts, scores_all = [], []
 
     for p in imgs:
@@ -180,7 +184,7 @@ def eval_yolo(
         det_counts.append(len(boxes))
         scores_all.extend(scores.tolist())
 
-        im = Image.open(p)
+        im = Image.open(p).convert("RGB")
         vis = draw_boxes(im, boxes.tolist(), labels, scores.tolist(), color=color)
         vis.save(out_dir / f"{p.stem}__pred.jpg", quality=95)
 
@@ -197,7 +201,7 @@ def eval_yolo(
     )
 
 
-# -------- Torchvision eval --------
+# -------- Torchvision helpers --------
 def load_torchvision_model(method: str, num_classes: int) -> torch.nn.Module:
     if method == "fasterrcnn":
         m = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(weights="DEFAULT")
@@ -230,15 +234,16 @@ class CocoDet(CocoDetection):
         return img, img_t, anns, imgid
 
 
+# --- Torchvision eval: na losowych COCO indexach (stara wersja) ---
 def eval_torchvision(
     dataset: str,
-    method: str,               # "fasterrcnn" / "retinanet"
+    method: str,  # "fasterrcnn" / "retinanet"
     n_images: int = 12,
-    score_thr: float = 0.5,    # <- domyślnie wyżej, żeby było mniej ramek
+    score_thr: float = 0.5,
     seed: int = 0,
     device: str = "cpu",
     color: str | None = None,
-    topk: int = 3,             # <- max 3 ramki / obrazek
+    topk: int = 3,
 ) -> EvalRow:
     valid_dir, valid_ann, train_dir, train_ann = coco_paths(dataset)
 
@@ -285,7 +290,6 @@ def eval_torchvision(
             scores = scores[keep]
             labels = labels[keep]
 
-            # top-k po score
             if len(scores) > 0 and topk > 0:
                 order = np.argsort(-scores)[:topk]
                 boxes = boxes[order]
@@ -313,24 +317,108 @@ def eval_torchvision(
     )
 
 
+# --- Torchvision eval: na dokładnie tych samych plikach co YOLO (NOWE) ---
+def eval_torchvision_on_images(
+    dataset: str,
+    method: str,  # "fasterrcnn" / "retinanet"
+    image_paths: list[Path],
+    score_thr: float = 0.5,
+    device: str = "cpu",
+    color: str | None = None,
+    topk: int = 3,
+) -> EvalRow:
+    # bierzemy nazwy klas z train COCO (mapping 1..K jak w treningu) [file:5]
+    _, _, _, train_ann = coco_paths(dataset)
+    contig_to_name = contig_to_name_from_train_json(train_ann)
+    num_classes = len(contig_to_name) + 1  # + background
+
+    run_dir = RUNS / "torchvision" / f"{dataset}__{method}"
+    weights = run_dir / "model_final.pt"
+    if not weights.exists():
+        raise FileNotFoundError(f"Brak wag torchvision: {weights}")
+
+    out_dir = OUT / "torchvision" / f"{dataset}__{method}"
+    ensure_dir(out_dir)
+
+    if color is None:
+        color = "blue" if method == "fasterrcnn" else "green"
+
+    model = load_torchvision_model(method, num_classes=num_classes)
+    state = torch.load(weights, map_location=device)
+    model.load_state_dict(state)
+    model.to(device)
+    model.eval()
+
+    det_counts, scores_all = [], []
+
+    with torch.inference_mode():
+        for p in image_paths:
+            img_pil = Image.open(p).convert("RGB")
+            img_t = F.to_tensor(img_pil).to(device)
+
+            out = model([img_t])[0]
+
+            boxes = out["boxes"].detach().cpu().numpy()
+            scores = out["scores"].detach().cpu().numpy()
+            labels = out["labels"].detach().cpu().numpy()
+
+            keep = scores >= float(score_thr)
+            boxes = boxes[keep]
+            scores = scores[keep]
+            labels = labels[keep]
+
+            if len(scores) > 0 and topk > 0:
+                order = np.argsort(-scores)[:topk]
+                boxes = boxes[order]
+                scores = scores[order]
+                labels = labels[order]
+
+            lab_text = [contig_to_name.get(int(l), f"class_{int(l)}") for l in labels.tolist()]
+
+            det_counts.append(len(boxes))
+            scores_all.extend(scores.tolist())
+
+            vis = draw_boxes(img_pil, boxes.tolist(), lab_text, scores.tolist(), color=color)
+            # zapis pod tą samą bazową nazwą co YOLO (łatwe porównanie)
+            vis.save(out_dir / f"{p.stem}__pred.jpg", quality=95)
+
+    return EvalRow(
+        framework="torchvision",
+        dataset=dataset,
+        model=method,
+        n_images=len(image_paths),
+        score_thr=float(score_thr),
+        topk=int(topk),
+        avg_dets_per_img=float(np.mean(det_counts)) if det_counts else 0.0,
+        avg_score=float(np.mean(scores_all)) if scores_all else 0.0,
+        out_dir=str(out_dir),
+    )
+
+
 def main():
     datasets = ["cats_dogs", "traffic_signs", "vehicles"]
     rows: list[dict] = []
 
-    # YOLO (czerwony)
     for ds in datasets:
-        for m in ["yolov8n", "yolov8s"]:
-            r = eval_yolo(ds, m, n_images=12, conf=0.25, seed=0, color="red", topk=3)
-            rows.append(asdict(r))
-            print("OK", r)
+        # wspólne obrazki (raz) z YOLO valid/images [file:6]
+        shared_dir = yolo_valid_images_dir(ds)
+        shared_imgs = pick_images(shared_dir, k=12, seed=0)
 
-    # Torchvision: Faster R-CNN (niebieski) + RetinaNet (zielony)
-    for ds in datasets:
-        r = eval_torchvision(ds, "fasterrcnn", n_images=12, score_thr=0.5, seed=0, device="cpu", color="blue", topk=3)
+        # YOLO: różne kolory dla 8n i 8s
+        r = eval_yolo(ds, "yolov8n", conf=0.25, seed=0, color="red", topk=3, image_paths=shared_imgs)
         rows.append(asdict(r))
         print("OK", r)
 
-        r = eval_torchvision(ds, "retinanet", n_images=12, score_thr=0.5, seed=0, device="cpu", color="green", topk=3)
+        r = eval_yolo(ds, "yolov8s", conf=0.25, seed=0, color="orange", topk=3, image_paths=shared_imgs)
+        rows.append(asdict(r))
+        print("OK", r)
+
+        # Torchvision na tych samych plikach
+        r = eval_torchvision_on_images(ds, "fasterrcnn", shared_imgs, score_thr=0.5, device="cpu", color="blue", topk=3)
+        rows.append(asdict(r))
+        print("OK", r)
+
+        r = eval_torchvision_on_images(ds, "retinanet", shared_imgs, score_thr=0.5, device="cpu", color="green", topk=3)
         rows.append(asdict(r))
         print("OK", r)
 
