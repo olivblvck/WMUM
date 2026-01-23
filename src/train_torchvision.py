@@ -38,10 +38,14 @@ SKIP_IF_FINAL_EXISTS = False
 TASKS = [
     {"dataset": "cats_dogs", "method": "fasterrcnn", "enabled": True},
     {"dataset": "cats_dogs", "method": "retinanet", "enabled": True},
-    {"dataset": "fruits_vegetables", "method": "fasterrcnn", "enabled": True},
-    {"dataset": "fruits_vegetables", "method": "retinanet", "enabled": True},
+    # {"dataset": "fruits_vegetables", "method": "fasterrcnn", "enabled": True},
+    # {"dataset": "fruits_vegetables", "method": "retinanet", "enabled": True},
     {"dataset": "traffic_signs", "method": "fasterrcnn", "enabled": True},
     {"dataset": "traffic_signs", "method": "retinanet", "enabled": True},
+    # {"dataset": "people", "method": "fasterrcnn", "enabled": True},
+    # {"dataset": "people", "method": "retinanet", "enabled": True},
+    {"dataset": "vehicles", "method": "fasterrcnn", "enabled": True},
+    {"dataset": "vehicles", "method": "retinanet", "enabled": True},
 ]
 
 

@@ -8,7 +8,7 @@ DATA = ROOT / "data" / "processed" / "yolov8"
 RUNS = ROOT / "runs" / "ultralytics"
 
 EPOCHS = 20
-IMGSZ = 512
+IMGSZ = 416
 BATCH = 4
 TRAIN_DEVICE = "mps"
 VAL_DEVICE = "cpu"
@@ -20,10 +20,14 @@ SKIP_IF_BEST_EXISTS = True
 TASKS = [
     {"dataset": "cats_dogs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "cats_dogs", "model": "yolov8s.pt", "enabled": True},
-    {"dataset": "fruits_vegetables", "model": "yolov8n.pt", "enabled": True},
-    {"dataset": "fruits_vegetables", "model": "yolov8s.pt", "enabled": True},
+    # {"dataset": "fruits_vegetables", "model": "yolov8n.pt", "enabled": True},
+    # {"dataset": "fruits_vegetables", "model": "yolov8s.pt", "enabled": True},
     {"dataset": "traffic_signs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "traffic_signs", "model": "yolov8s.pt", "enabled": True},
+    #{"dataset": "people", "model": "yolov8n.pt", "enabled": True},
+    #{"dataset": "people", "model": "yolov8s.pt", "enabled": True},
+    {"dataset": "vehicles", "model": "yolov8n.pt", "enabled": True},
+    {"dataset": "vehicles", "model": "yolov8s.pt", "enabled": True},
 ]
 
 
