@@ -15,7 +15,6 @@ ENV/
 .DS_Store
 
 # --- ML outputs / dane (żeby repo nie puchło) ---
-runs/
 data/raw/
 
 # (opcjonalnie) jeśli data/processed jest duże, odkomentuj:
