@@ -4,3 +4,4 @@ pycocotools
 Pillow
 tqdm
 ultralytics
+pandas
