@@ -1,0 +1,7 @@
+dataset,method,n_images,avg_dets_per_img,avg_score,out_dir
+cats_dogs,fasterrcnn,12,3.6666666666666665,0.497909196398475,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/torchvision/cats_dogs__fasterrcnn
+cats_dogs,retinanet,12,4.416666666666667,0.46573600341688914,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/torchvision/cats_dogs__retinanet
+traffic_signs,fasterrcnn,12,0.75,0.5121484729978774,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/torchvision/traffic_signs__fasterrcnn
+traffic_signs,retinanet,12,0.0,0.0,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/torchvision/traffic_signs__retinanet
+vehicles,fasterrcnn,12,16.5,0.6255689580934216,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/torchvision/vehicles__fasterrcnn
+vehicles,retinanet,12,0.5833333333333334,0.29976326652935575,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/torchvision/vehicles__retinanet
