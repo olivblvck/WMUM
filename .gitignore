@@ -23,6 +23,5 @@ data/processed/
 # (opcjonalnie) jeśli zapisujesz modele osobno:
 # models/
 
-runs/
-#runs/torchvision
-#runs/ultralytics
+runs/torchvision
+runs/ultralytics
