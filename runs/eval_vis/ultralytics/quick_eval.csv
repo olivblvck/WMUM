@@ -1,7 +1,0 @@
-dataset,model,n_images,avg_dets_per_img,avg_score,out_dir
-cats_dogs,yolov8n,12,1.1666666666666667,0.7174987537520272,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/ultralytics/cats_dogs__yolov8n
-cats_dogs,yolov8s,12,1.0,0.7336976627508799,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/ultralytics/cats_dogs__yolov8s
-traffic_signs,yolov8n,12,1.8333333333333333,0.5340099971402775,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/ultralytics/traffic_signs__yolov8n
-traffic_signs,yolov8s,12,0.8333333333333334,0.4817248463630676,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/ultralytics/traffic_signs__yolov8s
-vehicles,yolov8n,12,12.833333333333334,0.6042282380066909,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/ultralytics/vehicles__yolov8n
-vehicles,yolov8s,12,13.416666666666666,0.6357783427149613,/Users/oliwiaw/PycharmProjects/WMUM/runs/eval_vis/ultralytics/vehicles__yolov8s
