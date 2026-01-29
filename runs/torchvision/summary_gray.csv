@@ -1,0 +1,7 @@
+dataset,method,input_mode,device,epochs,batch_size,AP,AP50,AP75,run_dir
+cats_dogs,fasterrcnn,gray,cpu,10,1,0.254402656288208,0.4999575787044047,0.2108483784667104,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/cats_dogs__fasterrcnn__gray
+cats_dogs,retinanet,gray,cpu,10,1,0.04976018250095381,0.09663235488435136,0.052605653785165504,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/cats_dogs__retinanet__gray
+traffic_signs,fasterrcnn,gray,cpu,10,1,0.03698553431609204,0.06392964433425065,0.03899949296264166,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/traffic_signs__fasterrcnn__gray
+traffic_signs,retinanet,gray,cpu,10,1,0.0,0.0,0.0,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/traffic_signs__retinanet__gray
+vehicles,fasterrcnn,gray,cpu,10,1,0.0839627901434489,0.16774581718241321,0.07399710833901611,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/vehicles__fasterrcnn__gray
+vehicles,retinanet,gray,cpu,10,1,0.024126047191910242,0.0487505919219854,0.021462735963196804,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/vehicles__retinanet__gray
