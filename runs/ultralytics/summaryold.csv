@@ -1,9 +1,0 @@
-dataset,model,precision,recall,map50,map50_95,run_dir
-cats_dogs,yolov8n,0.6930616514533227,0.6817645074224021,0.7167411451575763,0.5094295504534518,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/cats_dogs__yolov8n
-cats_dogs,yolov8s,0.8525002280220142,0.6920921423686899,0.8062270461224617,0.5824967666964024,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/cats_dogs__yolov8s
-fruits_vegetables,yolov8n,0.009201929672904239,0.0979220779220779,0.018590450042143453,0.005196803143698225,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/fruits_vegetables__yolov8n
-fruits_vegetables,yolov8s,0.5269817104555884,0.10846371882086168,0.06880491522985215,0.02409735706808884,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/fruits_vegetables__yolov8s
-traffic_signs,yolov8n,0.2818968657363784,0.20118896574052947,0.16162503161716207,0.14071303947506494,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/traffic_signs__yolov8n
-traffic_signs,yolov8s,0.18416238443789737,0.0669895725574273,0.04888904178629881,0.043477147337207346,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/traffic_signs__yolov8s
-vehicles,yolov8n,0.34640411007457694,0.38744962522881465,0.3241200356953051,0.21193502980633067,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/vehicles__yolov8n
-vehicles,yolov8s,0.45580515205977634,0.46261982003017893,0.4099459022896684,0.2773017433949209,/Users/oliwiaw/PycharmProjects/WMUM/runs/ultralytics/vehicles__yolov8s
