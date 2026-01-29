@@ -30,7 +30,7 @@ OUT = RUNS / "eval_vis"
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
-# Torchvision input modes we support.
+# tryby dla Tourchvision
 # "rgb" -> weights in runs/torchvision/{ds}__{method}/model_final.pt
 # "gray" -> weights in runs/torchvision/{ds}__{method}__gray/model_final.pt
 TV_MODES = ["rgb", "gray"]
@@ -81,7 +81,8 @@ def write_csv(rows: list[dict], out_csv: Path) -> None:
         w.writerows(rows)
 
 
-# COCO helpers
+# funkcje pomocnicze do przekształcania danych COCO
+# Annotacje
 def find_ann(split_dir: Path) -> Path:
     for name in ["_annotations.coco.json", "annotations.coco.json"]:
         p = split_dir / name
@@ -91,6 +92,7 @@ def find_ann(split_dir: Path) -> Path:
     return cand[0] if cand else split_dir / "_annotations.coco.json"
 
 
+# Ścieżki do obrazów 
 def coco_paths(dataset: str) -> tuple[Path, Path, Path, Path]:
     base = DATA_COCO / dataset
     train_dir = base / "train"
@@ -105,7 +107,7 @@ def contig_to_name_from_train_json(train_ann: Path) -> dict[int, str]:
     return {i + 1: str(c["name"]) for i, c in enumerate(cats_sorted)}
 
 
-# YOLO helpers
+# funkcja pomocnicza do przekształcania danych YOLO
 def yolo_valid_images_dir(dataset: str) -> Path:
     cand = DATA_YOLO / dataset / "valid" / "images"
     if cand.exists():
@@ -116,7 +118,7 @@ def yolo_valid_images_dir(dataset: str) -> Path:
     return DATA_YOLO / dataset / "valid" / "images"
 
 
-# result row
+# klasa przechowójąca rezultaty
 @dataclass
 class EvalRow:
     framework: str
@@ -131,7 +133,7 @@ class EvalRow:
     out_dir: str
 
 
-# YOLO eval
+# YOLO ewaluacja
 def eval_yolo(
     dataset: str,
     model_stem: str,  # "yolov8n" / "yolov8s"
@@ -199,7 +201,7 @@ def eval_yolo(
     )
 
 
-# Torchvision helpers
+# Wybór modelu z torchvision
 def load_torchvision_model(method: str, num_classes: int) -> torch.nn.Module:
     if method == "fasterrcnn":
         m = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(weights="DEFAULT")
@@ -219,7 +221,6 @@ def load_torchvision_model(method: str, num_classes: int) -> torch.nn.Module:
         return m
 
     raise ValueError(f"Unknown method: {method}")
-
 
 def tv_run_dir(dataset: str, method: str, mode: str) -> Path:
     if mode == "gray":

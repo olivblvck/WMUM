@@ -13,7 +13,6 @@ BATCH = 4
 TRAIN_DEVICE = "mps"
 VAL_DEVICE = "cpu"
 
-# Jeśli True i istnieje best.pt -> pomiń zadanie
 SKIP_IF_BEST_EXISTS = True
 
 TASKS = [

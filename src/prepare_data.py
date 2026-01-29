@@ -70,7 +70,7 @@ def find_data_yaml(ds_yolo_dir: Path) -> Path:
 def clamp01(x: float) -> float:
     return max(0.0, min(1.0, x))
 
-
+# zwróć wyjątek dla wyników niepoprawnych (infinity, NaN)
 def safe_float(s: str) -> Optional[float]:
     try:
         x = float(s)
@@ -109,7 +109,7 @@ def repair_yolo_label_file(label_path: Path) -> Tuple[bool, int, int]:
             changed = True
             continue
 
-        # usuń bzdury
+        # czyszczenie
         if w <= 0 or h <= 0:
             removed_boxes += 1
             changed = True
