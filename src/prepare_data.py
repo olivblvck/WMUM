@@ -148,15 +148,15 @@ def repair_yolov8_dataset(ds_name: str):
 
     stats = RepairStats(dataset=ds_name, fmt="yolov8")
 
-    # kopiujemy całą strukturę, potem naprawiamy labelki w miejscu w dst
+    # kopiuj i napraw etykiety
     shutil.copytree(src, dst, dirs_exist_ok=True)
 
-    # usuwanie cache
+    # usuń cashe
     for cache in dst.rglob("*.cache"):
         cache.unlink(missing_ok=True)
         stats.notes.append(f"Removed cache: {cache.relative_to(dst)}")
 
-    # naprawa label files (train/valid/test)
+    # napraw (train/valid/test)
     label_dirs = []
     for split in ["train", "valid", "val", "test"]:
         p = dst / split / "labels"
@@ -195,12 +195,13 @@ def coco_find_images_dir(ds_coco_dir: Path) -> Optional[Path]:
 
 
 def repair_coco_annotation(coco: dict, images_dir: Path, stats: RepairStats) -> dict:
+    # element w slowniku
     # map image_id -> (file_name, width, height)
     img_by_id = {}
     for im in coco.get("images", []):
         img_by_id[im["id"]] = im
 
-    # usuń images bez pliku na dysku
+    # usuń elementy niepotrzebne
     kept_images = []
     removed_image_ids = set()
     for im in coco.get("images", []):

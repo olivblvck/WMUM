@@ -52,7 +52,6 @@ def coco_paths(ds: str) -> Tuple[Path, Path, Path, Path]:
     train_dir = DATA / ds / "train"
     val_dir = DATA / ds / "valid"
 
-    # POPRAWKA: tak jak w RGB
     train_json = train_dir / "_annotations.coco.json"
     val_json = val_dir / "_annotations.coco.json"
 

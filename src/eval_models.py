@@ -312,7 +312,7 @@ def eval_torchvision_on_images(
 
 
 def existing_tv_modes(dataset: str, method: str) -> list[str]:
-    # nie wymagamy żeby oba istniały; bierzemy tylko te, które mają wagi
+    # zwróć tylko te z wagami
     out = []
     for m in TV_MODES:
         w = tv_run_dir(dataset, method, m) / "model_final.pt"
@@ -330,7 +330,7 @@ def main():
         shared_dir = yolo_valid_images_dir(ds)
         shared_imgs = pick_images(shared_dir, k=12, seed=120867)
 
-        # YOLO: różne kolory dla 8n i 8s
+        # różne kolory dla YOLO8n i YOLO8s
         r = eval_yolo(ds, "yolov8n", conf=0.5, seed=0, color="red", topk=10, image_paths=shared_imgs)
         rows.append(asdict(r))
         print("OK", r)
@@ -339,7 +339,7 @@ def main():
         rows.append(asdict(r))
         print("OK", r)
 
-        # Torchvision: uruchom na tych samych plikach dla trybów które istnieją (rgb/gray)
+        # uruchom dla istniejących trybów
         for method in ["fasterrcnn", "retinanet"]:
             modes = existing_tv_modes(ds, method)
             if not modes:
