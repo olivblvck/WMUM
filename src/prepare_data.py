@@ -27,7 +27,7 @@ IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 @dataclass
 class RepairStats:
     dataset: str
-    fmt: str  # "yolov8" or "coco"
+    fmt: str  # "yolov8" / "coco"
     copied_images: int = 0
     copied_labels: int = 0
     missing_images: int = 0
@@ -58,7 +58,6 @@ def is_image(p: Path) -> bool:
 
 
 def find_data_yaml(ds_yolo_dir: Path) -> Path:
-    # Roboflow zwykle daje data.yaml w katalogu głównym eksportu YOLO
     candidates = list(ds_yolo_dir.glob("*.yaml")) + list(ds_yolo_dir.glob("*.yml"))
     for c in candidates:
         if c.name.lower() in {"data.yaml", "data.yml"}:
@@ -83,12 +82,6 @@ def safe_float(s: str) -> Optional[float]:
 
 
 def repair_yolo_label_file(label_path: Path) -> Tuple[bool, int, int]:
-    """
-    Zwraca:
-    - changed: czy plik zmieniono
-    - removed_boxes: ile bboxów usunięto
-    - clipped_boxes: ile bboxów przycięto do [0,1]
-    """
     lines = label_path.read_text(encoding="utf-8", errors="ignore").splitlines()
     out_lines = []
     changed = False
@@ -122,13 +115,13 @@ def repair_yolo_label_file(label_path: Path) -> Tuple[bool, int, int]:
             changed = True
             continue
 
-        # klipowanie do [0,1]
+        # klip do [0,1]
         xc2, yc2, w2, h2 = clamp01(xc), clamp01(yc), clamp01(w), clamp01(h)
         if (xc2, yc2, w2, h2) != (xc, yc, w, h):
             clipped_boxes += 1
             changed = True
 
-        # jeśli po klipowaniu w/h zrobiły się 0 -> usuń
+        # jeśli po klipowaniu zrobiły się 0 - usuń
         if w2 <= 0 or h2 <= 0:
             removed_boxes += 1
             changed = True
@@ -155,15 +148,15 @@ def repair_yolov8_dataset(ds_name: str):
 
     stats = RepairStats(dataset=ds_name, fmt="yolov8")
 
-    # kopiuj całą strukturę (train/valid/test + YAML), potem naprawiaj labelki w miejscu w dst
+    # kopiujemy całą strukturę, potem naprawiamy labelki w miejscu w dst
     shutil.copytree(src, dst, dirs_exist_ok=True)
 
-    # usuń cache (żeby YOLO przeliczył po naprawie)
+    # usuwanie cache
     for cache in dst.rglob("*.cache"):
         cache.unlink(missing_ok=True)
         stats.notes.append(f"Removed cache: {cache.relative_to(dst)}")
 
-    # napraw label files (train/valid/test)
+    # naprawa label files (train/valid/test)
     label_dirs = []
     for split in ["train", "valid", "val", "test"]:
         p = dst / split / "labels"
@@ -194,7 +187,6 @@ def save_coco_json(path: Path, obj: dict):
 
 
 def coco_find_images_dir(ds_coco_dir: Path) -> Optional[Path]:
-    # najczęstsze układy z Roboflow COCO export: images/ albo train/valid/test jako foldery obrazów
     for cand in ["images", "train", "valid", "val", "test"]:
         p = ds_coco_dir / cand
         if p.exists() and any(is_image(x) for x in p.rglob("*")):
@@ -233,7 +225,7 @@ def repair_coco_annotation(coco: dict, images_dir: Path, stats: RepairStats) -> 
             continue
 
         w_img, h_img = im.get("width"), im.get("height")
-        # jeśli brak width/height w COCO, próbuj odczytać z obrazu
+
         if not w_img or not h_img:
             fp = images_dir / im["file_name"]
             if fp.exists():
@@ -255,7 +247,7 @@ def repair_coco_annotation(coco: dict, images_dir: Path, stats: RepairStats) -> 
             stats.coco_annotations_removed += 1
             continue
 
-        # klipowanie do obrazu (COCO: x,y = lewy-górny róg) [x,y,width,height] [web:473]
+        # klipowanie do obrazu (COCO: x,y = lewy-górny róg) [x,y,width,height]
         x2 = max(0.0, min(float(x), w_img - 1))
         y2 = max(0.0, min(float(y), h_img - 1))
         bw2 = max(0.0, min(float(bw), w_img - x2))
@@ -286,7 +278,7 @@ def repair_coco_dataset(ds_name: str):
 
     stats = RepairStats(dataset=ds_name, fmt="coco")
 
-    # Roboflow COCO: każdy split ma folder z obrazami i plik _annotations.coco.json
+    # każdy split ma folder z obrazami i plik _annotations.coco.json
     splits = ["train", "valid", "test"]
     found_any = False
 

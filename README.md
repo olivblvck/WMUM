@@ -2,9 +2,9 @@
 
 ```text
 WMUM/
-├── .venv/                       # Virtualenv (lokalnie, ignorowane przez git)
+├── .venv/                       # Virtualenv 
 ├── data/
-│   ├── raw/                     # Dane wejściowe (np. eksporty z Roboflow) – duże, zwykle poza Gitem
+│   ├── raw/                     # Dane wejściowe 
 │   └── processed/               # Dane przetworzone używane przez trening/ewaluację
 │       ├── coco/                # Format COCO dla Torchvision
 │       │   ├── cats_dogs/{train,valid,test}/...
@@ -14,7 +14,7 @@ WMUM/
 │       │   ├── cats_dogs/...
 │       │   ├── traffic_signs/...
 │       │   └── vehicles/...
-│       └── _reports/            # Raporty z prepare_data (np. naprawy labeli)
+│       └── _reports/            # Raporty z prepare_data 
 │
 ├── notebooks/                   # Notebooki krok-po-kroku (pipeline projektu)
 │   ├── 01_prepare_data.ipynb
@@ -29,14 +29,14 @@ WMUM/
 │   │   ├── ultralytics/{dataset}__{model}/...__pred.jpg
 │   │   ├── torchvision/{dataset}__{method}/...__pred.jpg
 │   │   └── quick_eval_all.csv
-│   ├── ultralytics/             # Ciężkie artefakty treningu YOLO (wagi, wykresy) – ignorowane w .gitignore
-│   └── torchvision/             # Ciężkie artefakty treningu Torchvision (checkpointy) – ignorowane w .gitignore
+│   ├── ultralytics/             # Ciężkie artefakty treningu YOLO (wagi, wykresy)
+│   └── torchvision/             # Ciężkie artefakty treningu Torchvision (checkpointy) 
 │
-├── src/                         # Kod źródłowy (skrypty używane także w notebookach)
-│   ├── prepare_data.py          # Przygotowanie/naprawa danych (YOLOv8 + COCO)
+├── src/                         # Kod źródłowy 
+│   ├── prepare_data.py          # Przygotowanie/naprawa danych 
 │   ├── train_ultralytics.py     # Trening YOLOv8 (Ultralytics)
 │   ├── train_torchvision.py     # Trening modeli Torchvision (Faster R-CNN / RetinaNet)
-│   └── eval_models.py           # Ewaluacja + wizualizacje predykcji (siatki obrazków)
+│   └── eval_models.py           # Ewaluacja + wizualizacje predykcji 
 │
 ├── requirements.txt
 ├── .gitignore

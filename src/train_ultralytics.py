@@ -13,15 +13,14 @@ BATCH = 4
 TRAIN_DEVICE = "mps"
 VAL_DEVICE = "cpu"
 
-# Jeśli True i istnieje best.pt => pomiń zadanie (NIE resume)
-# Jeśli chcesz zawsze móc wznawiać, ustaw False.
+# Jeśli True i istnieje best.pt -> pomiń zadanie
 SKIP_IF_BEST_EXISTS = True
 
 TASKS = [
     {"dataset": "cats_dogs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "cats_dogs", "model": "yolov8s.pt", "enabled": True},
-    {"dataset": "fruits_vegetables", "model": "yolov8n.pt", "enabled": True},
-    {"dataset": "fruits_vegetables", "model": "yolov8s.pt", "enabled": True},
+    #{"dataset": "fruits_vegetables", "model": "yolov8n.pt", "enabled": True},
+    #{"dataset": "fruits_vegetables", "model": "yolov8s.pt", "enabled": True},
     {"dataset": "traffic_signs", "model": "yolov8n.pt", "enabled": True},
     {"dataset": "traffic_signs", "model": "yolov8s.pt", "enabled": True},
     #{"dataset": "people", "model": "yolov8n.pt", "enabled": True},
@@ -126,7 +125,7 @@ def main():
         best_pt = run_dir / "weights" / "best.pt"
         last_pt = run_dir / "weights" / "last.pt"
 
-        # ---- TRAIN (z resume) ----
+        #  train z resume
         if SKIP_IF_BEST_EXISTS and best_pt.exists():
             print(f"[SKIP] {exp_name} best exists: {best_pt}")
         else:
@@ -160,7 +159,7 @@ def main():
                     val=False,
                 )
 
-        # ---- VAL (CPU) ----
+        #  VAL cpu
         weights_for_val = best_pt if best_pt.exists() else (last_pt if last_pt.exists() else None)
         model_for_val = YOLO(str(weights_for_val)) if weights_for_val else YOLO(model_ckpt)
 

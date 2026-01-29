@@ -20,26 +20,25 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "processed" / "coco"
 RUNS = ROOT / "runs" / "torchvision"
 
-# --- trening (Mac: CPU jest stabilny dla detekcji; mps bywa kapryśne/wolne) ---
+# trening
 EPOCHS = 10
 BATCH_SIZE = 1
 LR = 1e-4
 WEIGHT_DECAY = 1e-4
 NUM_WORKERS = 0
-DEVICE = "cpu"
+DEVICE = "cpu"      # "mps"
 
-# zapis checkpointu po każdej epoce (i można wznowić po killu)
 SAVE_EVERY_EPOCH = 1
 
-# jeśli True: gdy jest model_final.pt to skip (nie wznawia, tylko pomija)
-# jeśli False: zawsze używamy checkpoint_last.pth (resume) jeśli istnieje
+# True: gdy jest model_final.pt to skip
+# False: używamy checkpoint_last.pth (resume)
 SKIP_IF_FINAL_EXISTS = False
 
 TASKS = [
     {"dataset": "cats_dogs", "method": "fasterrcnn", "enabled": True},
     {"dataset": "cats_dogs", "method": "retinanet", "enabled": True},
-    {"dataset": "fruits_vegetables", "method": "fasterrcnn", "enabled": True},
-    {"dataset": "fruits_vegetables", "method": "retinanet", "enabled": True},
+    #{"dataset": "fruits_vegetables", "method": "fasterrcnn", "enabled": True},
+    #{"dataset": "fruits_vegetables", "method": "retinanet", "enabled": True},
     {"dataset": "traffic_signs", "method": "fasterrcnn", "enabled": True},
     {"dataset": "traffic_signs", "method": "retinanet", "enabled": True},
     # {"dataset": "people", "method": "fasterrcnn", "enabled": True},
@@ -63,7 +62,7 @@ def load_categories(train_json: Path) -> List[dict]:
 
 
 def build_cat_mapping(categories: List[dict]) -> Dict[int, int]:
-    # map: COCO category_id -> contiguous 1..K (0 jest background)
+    # COCO category_id -> contiguous 1...K
     cat_ids = sorted([c["id"] for c in categories])
     return {cid: i + 1 for i, cid in enumerate(cat_ids)}
 
@@ -107,7 +106,7 @@ class CocoDet(CocoDetection):
                 areas.append(float(a.get("area", w * h)))
                 iscrowd.append(int(a.get("iscrowd", 0)))
 
-            # Jeśli trening i brak boxów => przeskocz, żeby torchvision się nie wywalił
+            # Jeśli trening i brak boxów -> skip
             if self.drop_empty and len(boxes) == 0 and tries < self.max_empty_tries:
                 tries += 1
                 cur_idx = (cur_idx + 1) % len(self.ids)
@@ -154,8 +153,6 @@ def make_model(method: str, num_classes: int) -> torch.nn.Module:
     if method == "retinanet":
         model = torchvision.models.detection.retinanet_resnet50_fpn_v2(weights="DEFAULT")
 
-        # FIX: w nowszych torchvision classification_head.conv[0] bywa Conv2dNormActivation
-        # który nie ma .in_channels; cls_logits to normalny Conv2d.
         in_features = model.head.classification_head.cls_logits.in_channels
         num_anchors = model.head.classification_head.num_anchors
 
@@ -238,7 +235,7 @@ def coco_eval_bbox(
 
     out_json.write_text(json.dumps(preds), encoding="utf-8")
 
-    # FIX: pycocotools.loadRes crashuje, jeśli preds == []
+    #pycocotools.loadRes crashuje jeśli preds == []
     if len(preds) == 0:
         print("[WARN] Empty predictions -> COCOeval skipped (AP=0).")
         return 0.0, 0.0, 0.0
@@ -257,7 +254,7 @@ def coco_eval_bbox(
 
 
 def save_checkpoint(path: Path, epoch: int, model: torch.nn.Module, optimizer: torch.optim.Optimizer, avg_loss: float):
-    # atomic save: zapis do tmp i dopiero potem replace (żeby nie było uszkodzonego .pth po przerwaniu)
+    #  zapis do tmp i dopiero potem replace (żeby nie było uszkodzonego .pth po przerwaniu)
     ckpt = {
         "epoch": int(epoch),
         "model_state_dict": model.state_dict(),
@@ -339,7 +336,7 @@ def main():
             if start_epoch > 0:
                 print(f"[RESUME] {exp_name} from epoch {start_epoch} (last avg_loss={last_loss})")
 
-            # UWAGA: resume jest per-epoka (nie od środka epoki)
+            # resume jest per-epoka
             for epoch in range(start_epoch, EPOCHS):
                 avg_loss = train_one_epoch(model, train_loader, optimizer, DEVICE, epoch, max_batches=20)
                 print(f"{exp_name} epoch {epoch+1}/{EPOCHS} loss={avg_loss:.4f}")
