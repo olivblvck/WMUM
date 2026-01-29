@@ -1,9 +1,0 @@
-dataset,method,device,epochs,batch_size,AP,AP50,AP75,run_dir
-cats_dogs,fasterrcnn,cpu,10,1,0.32848505345213125,0.5848533912744859,0.32403610860109244,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/cats_dogs__fasterrcnn
-cats_dogs,retinanet,cpu,10,1,0.14462232133475952,0.22847951759450638,0.15666631389762037,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/cats_dogs__retinanet
-fruits_vegetables,fasterrcnn,cpu,10,1,0.03914329104418507,0.07201003679852677,0.034501905378728694,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/fruits_vegetables__fasterrcnn
-fruits_vegetables,retinanet,cpu,10,1,0.0,0.0,0.0,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/fruits_vegetables__retinanet
-traffic_signs,fasterrcnn,cpu,10,1,0.04272273166632502,0.08401560662200176,0.037017528538008465,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/traffic_signs__fasterrcnn
-traffic_signs,retinanet,cpu,10,1,0.0,0.0,0.0,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/traffic_signs__retinanet
-vehicles,fasterrcnn,cpu,10,1,0.0908158137265095,0.1890114303624432,0.07236338842933991,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/vehicles__fasterrcnn
-vehicles,retinanet,cpu,10,1,0.03447042512015621,0.06434560154890902,0.03415705297725965,/Users/oliwiaw/PycharmProjects/WMUM/runs/torchvision/vehicles__retinanet
